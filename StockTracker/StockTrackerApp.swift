@@ -13,5 +13,6 @@ struct StockTrackerApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: Stock.self)
     }
 }
