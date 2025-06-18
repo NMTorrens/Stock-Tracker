@@ -13,15 +13,32 @@ struct WatchListView: View {
     @Query(sort: [SortDescriptor(\Stock.symbol)]) var stocks: [Stock]
     
     var body: some View {
-        List {
-            ForEach(stocks) { stock in
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(stock.name)
-                        Text(stock.symbol)
+        NavigationStack {
+            List {
+                ForEach(stocks) { stock in
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text(stock.name)
+                            Text(stock.symbol)
+                        }
                     }
                 }
+                .onDelete(perform: deleteStock)
             }
+            .navigationTitle("Watchlist")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    EditButton()
+                }
+            }
+        }
+    }
+    
+    func deleteStock(at offsets: IndexSet) {
+        for offset in offsets {
+            let stock = stocks[offset]
+            
+            modelContext.delete(stock)
         }
     }
 }
