@@ -11,6 +11,7 @@ import SwiftUI
 struct WatchListView: View {
     @Environment(\.modelContext) var modelContext
     @Query(sort: [SortDescriptor(\Stock.symbol)]) var stocks: [Stock]
+    @State private var isRefreshing = false
     
     var body: some View {
         NavigationStack {
@@ -18,12 +19,29 @@ struct WatchListView: View {
                 ForEach(stocks) { stock in
                     HStack {
                         VStack(alignment: .leading) {
+                            Text(stock.symbol).bold()
                             Text(stock.name)
-                            Text(stock.symbol)
+                        }
+                        
+                        Spacer()
+                        
+                        if let price = stock.price {
+                            Text("\(price, format: .currency(code: "USD"))")
+                        } else {
+                            Text("Loading...")
                         }
                     }
                 }
+                
                 .onDelete(perform: deleteStock)
+            }
+            .refreshable {
+                await refreshPrices()
+            }
+            .onAppear {
+                Task {
+                    await refreshPrices()
+                }
             }
             .navigationTitle("Watchlist")
             .toolbar {
@@ -41,7 +59,18 @@ struct WatchListView: View {
             modelContext.delete(stock)
         }
     }
+    
+    func refreshPrices() async {
+        for stock in stocks {
+            if let newPrice = await fetchQuote(for: stock.symbol) {
+                stock.price = newPrice
+            }
+        }
+        try? modelContext.save()
+    }
 }
+
+
 
 #Preview {
     do {

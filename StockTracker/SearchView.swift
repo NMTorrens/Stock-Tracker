@@ -14,15 +14,26 @@ struct SearchView: View {
     @State private var query: String = ""
     @State private var results: [SearchResult] = []
     
+    @FocusState private var isTextFieldFocused: Bool
+    
     var body: some View {
         VStack {
             // Search bar
             TextField("Search stocks...", text: $query)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding()
+                .focused($isTextFieldFocused)
                 .onChange(of: query) { _ in
                     Task {
                         await searchStocks()
+                    }
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            isTextFieldFocused = false // Dismiss keyboard
+                        }
                     }
                 }
 
@@ -37,8 +48,14 @@ struct SearchView: View {
                     }
                     Spacer()
                     Button("Add") {
-                        let newStock = Stock(symbol: result.symbol, name: result.description)
-                        modelContext.insert(newStock)
+                        // Check for duplicates manually
+                        if !stockExists(symbol: result.symbol) {
+                            let newStock = Stock(symbol: result.symbol, name: result.description, price: nil)
+                            modelContext.insert(newStock)
+                            try? modelContext.save()
+                        } else {
+                            print("Stock already exists")
+                        }
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -67,6 +84,11 @@ struct SearchView: View {
         } catch {
             print("Error fetching search results: \(error)")
         }
+    }
+    
+    func stockExists(symbol: String) -> Bool {
+        // SwiftData way of manually checking for duplicates
+        return (try? modelContext.fetch(FetchDescriptor<Stock>(predicate: #Predicate { $0.symbol == symbol })).isEmpty == false) ?? false
     }
 }
 
